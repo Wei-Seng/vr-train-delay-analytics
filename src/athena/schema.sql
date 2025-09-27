@@ -1,13 +1,22 @@
--- Create Athena table for processed train data
-CREATE EXTERNAL TABLE IF NOT EXISTS train_delays (
+-- Create Athena database first
+CREATE DATABASE IF NOT EXISTS train_delays_database;
+
+-- Create external table for processed train data
+CREATE EXTERNAL TABLE IF NOT EXISTS train_delays_database.train_delays (
   train_number STRING,
   departure_station STRING,
+  arrival_station STRING,
   scheduled_time TIMESTAMP,
   actual_time TIMESTAMP,
   delay_minutes INT,
+  route STRING,
   date_partition STRING
 )
-PARTITIONED BY (year STRING, month STRING, day STRING)
+PARTITIONED BY (
+  year STRING, 
+  month STRING, 
+  day STRING
+)
 STORED AS PARQUET
 LOCATION 's3://vr-trains-processed-data/parquet/'
 TBLPROPERTIES ('parquet.compression'='SNAPPY');
