@@ -1,5 +1,5 @@
-import boto3
-import pandas as pd
+import boto3 # type: ignore
+import pandas as pd # type: ignore
 from datetime import datetime, timedelta
 
 # Configuration

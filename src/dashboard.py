@@ -1,6 +1,6 @@
-import streamlit as st
-from pyathena import connect
-import pandas as pd
+import streamlit as st # type: ignore
+from pyathena import connect # type: ignore
+import pandas as pd # type: ignore
 
 # --- Page Configuration ---
 st.set_page_config(
