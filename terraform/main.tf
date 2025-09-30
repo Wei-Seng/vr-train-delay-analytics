@@ -1,12 +1,12 @@
 # terraform/main.tf
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-  }
-}
+#terraform {
+#  required_providers {
+#    aws = {
+#      source  = "hashicorp/aws"
+#      version = "~> 5.0"
+#    }
+#  }
+#} BC
 
 # S3 Buckets
 resource "aws_s3_bucket" "raw_data" {
@@ -29,8 +29,12 @@ resource "aws_athena_database" "train_delays_db" {
   bucket = aws_s3_bucket.processed_data.bucket
 }
 
-# API Gateway
-resource "aws_api_gateway_rest_api" "train_api" {
-  name        = "vr-train-delay-api"
-  description = "API for VR train delay analytics"
-}
+resource "aws_s3_bucket" "athena_results" {
+  bucket = "vr-trains-athena-results-${random_string.suffix.result}"
+} # BC
+
+# API Gateway 
+#resource "aws_api_gateway_rest_api" "train_api" {
+#  name        = "vr-train-delay-api"
+#  description = "API for VR train delay analytics"
+#} BC
