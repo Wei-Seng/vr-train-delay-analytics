@@ -1,9 +1,10 @@
-# Defines the EC2 application server
+# --- EC2 Application Server ---
 
 # 1. Find the latest Amazon Linux 2 AMI
 data "aws_ami" "amazon_linux_2" {
   most_recent = true
   owners      = ["amazon"]
+
   filter {
     name   = "name"
     values = ["amzn2-ami-hvm-*-x86_64-gp2"]
@@ -20,7 +21,7 @@ resource "aws_security_group" "app_server_sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # WARNING: Open to all IPs. Restrict to your IP for better security.
+    cidr_blocks = ["0.0.0.0/0"] # ⚠️ Consider restricting to your IP for better security
   }
 
   ingress {
@@ -40,16 +41,16 @@ resource "aws_security_group" "app_server_sg" {
 }
 
 # 3. Create the EC2 instance
-resource "aws_ec2_instance" "app_server" {
+resource "aws_instance" "app_server" {
   ami           = data.aws_ami.amazon_linux_2.id
   instance_type = "t2.micro" # Free-tier eligible
 
   vpc_security_group_ids = [aws_security_group.app_server_sg.id]
-  
-  # Attach the pre-existing LabRole via its instance profile
-  iam_instance_profile = "LabInstanceProfile" # From your screenshot
 
-  # IMPORTANT: You must create a key pair named "vockey" in the EC2 console first.
+  # Attach the pre-existing LabRole via its instance profile
+  iam_instance_profile = "LabInstanceProfile"
+
+  # You must create a key pair named "vockey" in the EC2 console first
   key_name = "vockey"
 
   tags = {
@@ -60,5 +61,5 @@ resource "aws_ec2_instance" "app_server" {
 # 4. Output the server's public IP address
 output "app_server_public_ip" {
   description = "The public IP address of the application server"
-  value       = aws_ec2_instance.app_server.public_ip
+  value       = aws_instance.app_server.public_ip
 }

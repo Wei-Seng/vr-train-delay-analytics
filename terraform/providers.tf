@@ -1,13 +1,6 @@
 # terraform/providers.tf
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-  }
-}
 
+# This block configures the AWS provider itself, such as the region.
 provider "aws" {
   region = "us-east-1"
 }
