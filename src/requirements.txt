@@ -1,6 +1,14 @@
-boto3
-pandas
-pyarrow
-requests
-streamlit
-PyAthena
+# Core AWS libraries 
+boto3==1.26.163
+botocore==1.29.163
+urllib3<2
+
+# Data processing libraries
+pandas==1.5.3
+pyarrow==12.0.1
+s3fs==2023.1.0
+
+# Frontend and Athena connection
+streamlit==1.23.1
+pyathena==2.25.0
+requests==2.31.0
