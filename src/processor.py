@@ -1,13 +1,13 @@
-import boto3
-import pandas as pd
+import boto3 # type: ignore
+import pandas as pd # type: ignore
 import json
 from datetime import datetime
-import requests
+import requests # type: ignore
 import tempfile
 
 # Attempt to configure X-Ray if present to avoid [Errno 90] errors
 try:
-    from aws_xray_sdk.core import xray_recorder
+    from aws_xray_sdk.core import xray_recorder # type: ignore
     xray_recorder.configure(streaming_threshold=0)
 except ImportError:
     pass
