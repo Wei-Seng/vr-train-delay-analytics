@@ -7,7 +7,7 @@ from datetime import datetime
 RAW_BUCKET_NAME = "vr-trains-raw-data-..." # IMPORTANT: Replace with your actual bucket name after deployment
 API_URL = "https://rata.digitraffic.fi/api/v1/train-locations/latest/"
 
-s3_client = boto3.client('s3' )
+s3_client = boto3.client('s3')
 
 def fetch_and_save_data():
     """Fetches latest train data and saves it as a JSON file to S3."""
