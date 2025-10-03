@@ -58,6 +58,35 @@ resource "aws_instance" "app_server" {
   }
 }
 
+# 1. SNS Topic for alerts (new resource)
+resource "aws_sns_topic" "alerts" {
+  name = "vr-trains-alerts"
+}
+
+resource "aws_sns_topic_subscription" "email_alert" {
+  topic_arn = aws_sns_topic.alerts.arn
+  protocol  = "email"
+  endpoint  = "2401493@sit.singaporetech.edu.sg"  # Must confirm subscription
+}
+
+# 2. CloudWatch Alarm (new resource)
+resource "aws_cloudwatch_metric_alarm" "ec2_cpu_high" {
+  alarm_name          = "vr-trains-high-cpu"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/EC2"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = "80"
+  alarm_description   = "Alert when CPU exceeds 80%"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+  
+  dimensions = {
+    InstanceId = aws_instance.app_server.id
+  }
+}
+
 # 4. Output the server's public IP address
 output "app_server_public_ip" {
   description = "The public IP address of the application server"

@@ -28,6 +28,14 @@ resource "aws_s3_bucket" "processed_data" {
   bucket = "vr-trains-processed-data-${random_string.suffix.result}"
 }
 
+resource "aws_s3_bucket_versioning" "processed_data" {
+  bucket = aws_s3_bucket.processed_data.id
+  
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
 resource "aws_s3_bucket" "athena_results" {
   bucket = "vr-trains-athena-results-${random_string.suffix.result}"
 }
