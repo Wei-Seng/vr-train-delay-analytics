@@ -10,7 +10,7 @@ st.set_page_config(
 )
 
 # --- AWS & Athena Configuration ---
-ATHENA_S3_STAGING_DIR = "s3://vr-trains-athena-results-wtkvq2mt"
+ATHENA_S3_STAGING_DIR = "s3://vr-trains-athena-results-..."
 ATHENA_DB_NAME = "train_delays_database"
 AWS_REGION = "us-east-1"
 
