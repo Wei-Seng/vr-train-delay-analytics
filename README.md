@@ -71,7 +71,8 @@ The Streamlit dashboard provides 5 key visualizations:
 
 ### Infrastructure Deployment
 1. Clone this repository:
-git clone https://github.com/Wei-Seng/vr-train-delay-analytics.gitcd vr-train-delay-analytics
+git clone https://github.com/Wei-Seng/vr-train-delay-analytics.git
+cd vr-train-delay-analytics
 
 2. Navigate to terraform directory:
 cd terraform
