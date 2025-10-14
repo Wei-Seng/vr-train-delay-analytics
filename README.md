@@ -15,11 +15,13 @@ This project builds a cloud-based system to analyze train delay patterns within 
 
 ## Architecture
 
-![System Architecture](diagrams/DataFlowDiagram.png)
+![System Architecture](diagrams/SystemArchitectureDiagram.png)
+
 *High-level system architecture showing AWS services and data flow*
 
 ## Data Flow
-![Data Pipeline](diagrams/SystemArchitectureDiagram.png)
+![Data Pipeline](diagrams/DataFlowDiagram.png)
+
 *Step-by-step journey of data from source to dashboard*
 
 ## Technology Stack
