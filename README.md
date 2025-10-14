@@ -28,19 +28,17 @@ This project builds a cloud-based system to analyze train delay patterns within 
 
 ### Data Layer
 * **Data Storage:** Amazon S3 (Raw JSON & Processed Parquet/CSV)
-* **Data Processing:** AWS Glue Jobs, AWS Lambda
+* **Data Processing:** Python scripts (collector.py for data fetching to raw S3, processor.py for processing to Parquet)
 * **Analytics & Querying:** Amazon Athena
 * **Database:** Partitioned external tables for cost efficiency
 
 ### Application Layer
-* **Real-time Streaming:** Amazon Kinesis Data Streams
-* **API Layer:** Amazon API Gateway, AWS Lambda
-* **Dashboard:** Streamlit (hosted on Streamlit Cloud)
-* **Authentication:** Basic API key authentication
+* **API Layer:** direct API calls to public endpoints like rata.digitraffic.fi
+* **Dashboard:** Streamlit (hosted on AWS EC2)
 
 ### Infrastructure
 * **Infrastructure as Code:** Terraform
-* **Monitoring:** AWS CloudWatch
+* **Monitoring:** AWS CloudWatch (with alarms and SNS notifications)
 * **Version Control:** Git with collaborative workflows
 
 ## Dashboard Setup (Streamlit)
@@ -66,7 +64,7 @@ The Streamlit dashboard provides 5 key visualizations:
 ### Prerequisites
 - AWS CLI configured with credentials (AWS Learner Lab)
 - Terraform installed (v1.0+)
-- Python 3.8+ for local dashboard development
+- Python 3.7 for local dashboard development
 - Git for version control
 
 ### Infrastructure Deployment
@@ -94,18 +92,16 @@ terraform apply
 This project is designed for student budgets (target: <100 SGD total):
 - **S3 Storage:** ~$1-2 for entire project duration
 - **Athena:** Pay-per-query (very affordable for coursework)
-- **Streamlit:** Free hosting on Streamlit Cloud
 
-### Sample API Endpoints
-GET /delays/route/HKI/TPE?start=2023-01-01&end=2023-01-31GET /delays/stations/HKI
-GET /trains/IC123/events
+###  API 
+data sourced directly from public API: https://rata.digitraffic.fi/api/v1/
 
 ## Development Workflow
 1. **Data Development:** Work with sample data locally first
 2. **Infrastructure:** Test Terraform changes in development environment  
 3. **Dashboard:** Develop Streamlit app with mock data
 4. **Integration:** Connect dashboard to real AWS services
-5. **Deployment:** Deploy to Streamlit Cloud for sharing
+5. **Deployment:** Deploy to streamlit dashboard
 
 ## External Resources
 - [Digitraffic Railway API](https://www.digitraffic.fi/rautatieliikenne/)
