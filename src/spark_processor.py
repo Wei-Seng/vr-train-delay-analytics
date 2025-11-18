@@ -2,10 +2,10 @@
 VR Train Delay Spark ETL Job
 Processes raw JSON from S3 using distributed Spark on EMR
 """
-from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, explode, first, reverse, when, to_timestamp, unix_timestamp
-from pyspark.sql.types import IntegerType
-import requests
+from pyspark.sql import SparkSession # type: ignore
+from pyspark.sql.functions import col, explode, first, reverse, when, to_timestamp, unix_timestamp # type: ignore
+from pyspark.sql.types import IntegerType # type: ignore
+import requests # type: ignore
 import json
 import sys
 
@@ -99,9 +99,9 @@ print("DELAY STATISTICS BY TRAIN TYPE")
 print("=" * 60)
 stats_df = final_df.groupBy("trainType") \
     .agg(
-        avg("delay_minutes").alias("avg_delay"),
-        count("*").alias("num_trains"),
-        spark_max("delay_minutes").alias("max_delay")
+        avg("delay_minutes").alias("avg_delay"), # type: ignore
+        count("*").alias("num_trains"), # type: ignore
+        spark_max("delay_minutes").alias("max_delay") # type: ignore
     ) \
     .orderBy(col("avg_delay").desc())
 stats_df.show(10, truncate=False)
