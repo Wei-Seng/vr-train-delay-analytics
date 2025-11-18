@@ -46,6 +46,7 @@ resource "aws_instance" "app_server" {
   instance_type = "t2.micro" # Free-tier eligible
 
   vpc_security_group_ids = [aws_security_group.app_server_sg.id]
+  subnet_id              = "subnet-0007934ef114611ed"
 
   # Attach the pre-existing LabRole via its instance profile
   iam_instance_profile = "LabInstanceProfile"
