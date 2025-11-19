@@ -2,12 +2,37 @@
 VR Train Delay Spark ETL Job
 Processes raw JSON from S3 using distributed Spark on EMR
 """
-from pyspark.sql import SparkSession # type: ignore
-from pyspark.sql.functions import col, explode, first, reverse, when, to_timestamp, unix_timestamp # type: ignore
-from pyspark.sql.types import IntegerType # type: ignore
-import requests # type: ignore
-import json
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import (
+    col, expr, when, to_timestamp, unix_timestamp, 
+    count, avg, max as spark_max 
+) 
+from pyspark.sql.types import (
+    IntegerType, StructType, StructField, StringType, ArrayType
+)
+import requests 
 import sys
+
+# Define the function to fetch data in a distributed way
+def fetch_timetable_data_distributed(partition_of_rows):
+    """
+    Called by Spark Executors to fetch API data for a partition of unique trains.
+    """
+    session = requests.Session() 
+    
+    for row in partition_of_rows:
+        dep_date = row['departureDate']
+        train_num = row['trainNumber']
+        url = f"https://rata.digitraffic.fi/api/v1/trains/{dep_date}/{train_num}"
+        
+        try:
+            response = session.get(url, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                if data:
+                    yield data[0] # Yield the train detail object
+        except Exception:
+            pass
 
 # Initialize Spark
 spark = SparkSession.builder \
@@ -23,99 +48,87 @@ RAW_BUCKET = sys.argv[1]
 PROCESSED_BUCKET = sys.argv[2]
 
 print("=" * 60)
-print("VR TRAIN DELAY SPARK PROCESSING JOB")
-print("=" * 60)
-print(f"Raw Data Bucket : s3://{RAW_BUCKET}/")
-print(f"Output Bucket : s3://{PROCESSED_BUCKET}/")
-print(f"Spark Version : {spark.version}")
-print(f"Parallelism Level : {spark.sparkContext.defaultParallelism}")
+print("VR TRAIN DELAY SPARK PROCESSING JOB (Distributed API Fetch)")
 print("=" * 60)
 
-# Step 1: Read raw JSON files (train locations)
+# Step 1: Read raw JSON files
 print("\n[Step 1/7] Reading raw JSON files from S3...")
-raw_path = f"s3://{RAW_BUCKET}/**/*.json"  # Recursive read for partitions
-df_positions = spark.read.json(raw_path)
-raw_count = df_positions.count()
-print(f"✓ Loaded {raw_count} raw position records")
+raw_path = f"s3://{RAW_BUCKET}/"
+df_positions = spark.read.option("basePath", raw_path).json(raw_path)
+print("✓ Raw data loaded")
 
-# Step 2: Get unique trains (distributed dedup)
+# Step 2: Get unique trains
 print("\n[Step 2/7] Extracting unique trains...")
 unique_trains = df_positions.select("trainNumber", "departureDate").distinct()
 unique_count = unique_trains.count()
 print(f"✓ Found {unique_count} unique trains")
 
-# Step 3: Fetch timetable details (serial on driver)
-print("\n[Step 3/7] Fetching timetable details via API...")
-train_details = []
-unique_list = unique_trains.collect()  # Collect to driver (small set)
-for row in unique_list:
-    dep_date = row['departureDate']
-    train_num = row['trainNumber']
-    url = f"https://rata.digitraffic.fi/api/v1/trains/{dep_date}/{train_num}"
-    try:
-        response = requests.get(url, timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            if data:
-                train_details.append(data[0])  # Assume first item is the train
-    except Exception as e:
-        print(f"Warning: Failed to fetch {url}: {e}")
-fetch_count = len(train_details)
-print(f"✓ Fetched timetables for {fetch_count} trains")
+# Step 3: Fetch timetable details (Distributed/Parallel)
+print("\n[Step 3/7] Fetching timetable details via API in parallel...")
+train_rdd = unique_trains.rdd.mapPartitions(fetch_timetable_data_distributed)
 
-# Step 4: Create Spark DF from fetched data
+# Define a schema for the fetched JSON data
+timetable_schema = StructType([
+    StructField("trainNumber", IntegerType(), True),
+    StructField("trainType", StringType(), True),
+    StructField("departureDate", StringType(), True),
+    StructField("timeTableRows", ArrayType(StructType([
+        StructField("stationShortCode", StringType(), True),
+        StructField("type", StringType(), True), 
+        StructField("scheduledTime", StringType(), True),
+        StructField("actualTime", StringType(), True)
+    ])), True),
+])
+
+# Step 4: Create DataFrame and Cache
 print("\n[Step 4/7] Creating DataFrame from fetched timetables...")
-if train_details:
-    df = spark.createDataFrame(train_details)
-else:
-    print("ERROR: No train details fetched")
-    sys.exit(1)
-df_count = df.count()
-print(f"✓ Created DataFrame with {df_count} records")
+df = spark.createDataFrame(train_rdd, schema=timetable_schema) 
+df.persist() 
 
-# Step 5: Extract departure/arrival info
+df_count = df.count() 
+if df_count == 0:
+    print("ERROR: No train details fetched. Check network/logs.")
+    sys.exit(1)
+print(f"✓ Fetched and cached {df_count} train timetables")
+
+# Step 5: Extract departure/arrival info (FIXED LOGIC)
 print("\n[Step 5/7] Extracting departure and arrival info...")
-df = df.withColumn("departure_info", explode(col("timeTableRows")).alias("row").filter(col("row.type") == "DEPARTURE")[0])
-df = df.withColumn("arrival_info", reverse(explode(col("timeTableRows")).alias("row").filter(col("row.type") == "ARRIVAL"))[0])
+
+# Use 'expr' to filter the array directly using SQL syntax
+# filter(array, x -> condition) returns an array of matching elements
+# [0] takes the first match
+df = df.withColumn("departure_info", expr("filter(timeTableRows, x -> x.type == 'DEPARTURE')[0]"))
+
+# element_at(array, -1) takes the LAST element (final destination)
+df = df.withColumn("arrival_info", expr("element_at(filter(timeTableRows, x -> x.type == 'ARRIVAL'), -1)"))
+
+# Filter out valid journeys
 df = df.filter(col("departure_info").isNotNull() & col("arrival_info").isNotNull())
 filtered_count = df.count()
 print(f"✓ Filtered to {filtered_count} valid journeys")
 
-# Step 6: Calculate delays and select columns
+# Step 6: Calculate delays
 print("\n[Step 6/7] Calculating delay metrics...")
 df = df.withColumn("departureStation", col("departure_info.stationShortCode"))
 df = df.withColumn("destinationStation", col("arrival_info.stationShortCode"))
+
+# Convert timestamps
 df = df.withColumn("scheduled_time_ts", to_timestamp(col("departure_info.scheduledTime")))
-df = df.withColumn("actual_time_ts", to_timestamp(when(col("departure_info.actualTime").isNotNull(), col("departure_info.actualTime")).otherwise(col("departure_info.scheduledTime"))))
+df = df.withColumn("actual_time_ts", 
+    to_timestamp(
+        when(col("departure_info.actualTime").isNotNull(), col("departure_info.actualTime"))
+        .otherwise(col("departure_info.scheduledTime"))
+    )
+)
+
+# Calculate delay
 df = df.withColumn("delay_minutes", ((unix_timestamp("actual_time_ts") - unix_timestamp("scheduled_time_ts")) / 60).cast(IntegerType()))
 
 final_df = df.select("trainNumber", "trainType", "departureStation", "destinationStation", "scheduled_time_ts", "actual_time_ts", "delay_minutes").filter(col("delay_minutes").isNotNull())
-final_count = final_df.count()
-print(f"✓ Calculated delays for {final_count} train records")
 
-# Display sample statistics
-print("\n" + "=" * 60)
-print("DELAY STATISTICS BY TRAIN TYPE")
-print("=" * 60)
-stats_df = final_df.groupBy("trainType") \
-    .agg(
-        avg("delay_minutes").alias("avg_delay"), # type: ignore
-        count("*").alias("num_trains"), # type: ignore
-        spark_max("delay_minutes").alias("max_delay") # type: ignore
-    ) \
-    .orderBy(col("avg_delay").desc())
-stats_df.show(10, truncate=False)
-
-# Step 7: Write output to S3
+# Step 7: Write output
 output_path = f"s3://{PROCESSED_BUCKET}/train_delays_spark.parquet"
 print(f"\n[Step 7/7] Writing Parquet output to S3...")
-print(f"Output path: {output_path}")
-final_df.write.mode("overwrite").parquet(output_path)  # Removed coalesce(1) for better distribution
-print("\n" + "=" * 60)
-print("✅ SPARK JOB COMPLETED SUCCESSFULLY")
-print("=" * 60)
-print(f"Records processed : {final_count}")
-print(f"Output format : Parquet (Snappy compressed)")
-print(f"Output location : {output_path}")
-print("=" * 60)
+final_df.write.mode("overwrite").parquet(output_path)  
+print("\n✅ SPARK JOB COMPLETED SUCCESSFULLY")
 spark.stop()

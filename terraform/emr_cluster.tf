@@ -87,6 +87,7 @@ resource "aws_emr_cluster" "train_analytics" {
     subnet_id        = "subnet-0007934ef114611ed"
     emr_managed_master_security_group = aws_security_group.emr_master.id
     emr_managed_slave_security_group  = aws_security_group.emr_core.id  # Uses "slave" attribute (legacy), but references core resource
+    key_name = "vockey2"
   }
 
   master_instance_group {
@@ -120,6 +121,11 @@ EOF
 
   tags = {
     Name = "VR Trains Big Data Cluster"
+  }
+
+  bootstrap_action {
+    path = "s3://vr-trains-processed-data-05y82rl7/scripts/bootstrap.sh" 
+    name = "Install Requests"
   }
 }
 
