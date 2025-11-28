@@ -7,7 +7,7 @@ An **Analytics-as-a-Service (AaaS)** platform built on AWS that collects, proces
 This project builds a cloud-based system to analyze train delay patterns within Finland's national train system, providing insights through multiple access methods: batch downloads, streaming simulation with interactive dashboards.
 
 ## Features
-- **Automated Data Ingestion** – Cron-driven collector pulls live train positions every 2 minutes
+- **Automated Data Ingestion** – Cron-driven collector pulls live train positions every few minutes
 - **Distributed Batch Processing** – Spark job on Amazon EMR (3-node cluster) transforms raw JSON → enriched Parquet
 - **Serverless Analytics** – Amazon Athena queries over partitioned Parquet data
 - **Interactive Dashboard** – Streamlit app hosted on EC2 with real-time insights
